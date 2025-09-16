@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Rúbricas Analíticas con IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-shadow { box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .btn-primary:hover { background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%); }
+        .loading { animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white py-6">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center">
+                <div class="flex-1"></div>
+                <div class="text-center flex-1">
+                    <h1 class="text-3xl font-bold">🎯 Generador de Rúbricas Analíticas con IA</h1>
+                    <p class="mt-2 text-blue-100">Alineación constructiva según John Biggs</p>
+                </div>
+                <div class="flex-1 flex justify-end">
+                    <button onclick="nuevoProyecto()" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 text-sm">
+                        🆕 Nuevo Proyecto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Paso 1: Información Inicial -->
+        <div id="step1" class="bg-white rounded-lg card-shadow p-6 mb-6">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800">📋 Información del Proyecto Educativo</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tema a Tratar</label>
+                    <input type="text" id="tema" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Ej: Fotosíntesis en plantas">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Asignatura</label>
+                    <input type="text" id="asignatura" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Ej: Biología">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Programa Académico</label>
+                    <input type="text" id="programa" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Ej: Licenciatura en Ciencias Naturales">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nivel Educativo</label>
+                    <select id="nivel" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Seleccionar nivel</option>
+                        <option value="Primaria">Primaria</option>
+                        <option value="Secundaria">Secundaria</option>
+                        <option value="Bachillerato">Bachillerato</option>
+                        <option value="Universidad">Universidad</option>
+                        <option value="Posgrado">Posgrado</option>
+                    </select>
+                </div>
+            </div>
+            <button onclick="generarConIA()" class="mt-6 btn-primary text-white px-8 py-3 rounded-lg font-medium hover:shadow-lg transition-all duration-300">
+                <span id="btnText">🤖 Generar con IA</span>
+                <span id="loadingSpinner" class="hidden">⏳ Generando...</span>
+            </button>
+        </div>
+
+        <!-- Paso 2: Resultado de Aprendizaje y Actividad -->
+        <div id="step2" class="hidden bg-white rounded-lg card-shadow p-6 mb-6 fade-in">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800">🎯 Resultado de Aprendizaje y Actividad Auténtica</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-medium text-gray-700">Resultado de Aprendizaje</label>
+                        <button onclick="regenerarResultado()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            🔄 Regenerar con IA
+                        </button>
+                    </div>
+                    <textarea id="resultadoAprendizaje" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Edita aquí el resultado de aprendizaje generado por IA..."></textarea>
+                    <p class="text-xs text-gray-500 mt-1">💡 Puedes editar libremente el texto generado por IA</p>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-medium text-gray-700">Actividad de Evaluación Auténtica</label>
+                        <button onclick="regenerarActividad()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            🔄 Regenerar con IA
+                        </button>
+                    </div>
+                    <textarea id="actividadEvaluacion" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Edita aquí la actividad de evaluación generada por IA..."></textarea>
+                    <p class="text-xs text-gray-500 mt-1">💡 Puedes editar libremente el texto generado por IA</p>
+                </div>
+            </div>
+            
+            <!-- Taxonomía de Bloom -->
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800">🧠 Taxonomía de Bloom - Selecciona el Nivel Cognitivo</h3>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded-lg border">
+                        <h4 class="font-semibold text-red-700 mb-2">🔴 Recordar</h4>
+                        <select id="bloomRecordar" class="w-full p-2 border rounded text-sm">
+                            <option value="">Seleccionar verbo</option>
+                            <option value="identifica">Identifica</option>
+                            <option value="reconoce">Reconoce</option>
+                            <option value="enumera">Enumera</option>
+                            <option value="describe">Describe</option>
+                            <option value="nombra">Nombra</option>
+                            <option value="define">Define</option>
+                        </select>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border">
+                        <h4 class="font-semibold text-orange-700 mb-2">🟠 Comprender</h4>
+                        <select id="bloomComprender" class="w-full p-2 border rounded text-sm">
+                            <option value="">Seleccionar verbo</option>
+                            <option value="explica">Explica</option>
+                            <option value="interpreta">Interpreta</option>
+                            <option value="resume">Resume</option>
+                            <option value="clasifica">Clasifica</option>
+                            <option value="compara">Compara</option>
+                            <option value="ejemplifica">Ejemplifica</option>
+                        </select>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border">
+                        <h4 class="font-semibold text-yellow-700 mb-2">🟡 Aplicar</h4>
+                        <select id="bloomAplicar" class="w-full p-2 border rounded text-sm">
+                            <option value="">Seleccionar verbo</option>
+                            <option value="aplica">Aplica</option>
+                            <option value="demuestra">Demuestra</option>
+                            <option value="utiliza">Utiliza</option>
+                            <option value="resuelve">Resuelve</option>
+                            <option value="ejecuta">Ejecuta</option>
+                            <option value="implementa">Implementa</option>
+                        </select>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border">
+                        <h4 class="font-semibold text-green-700 mb-2">🟢 Analizar</h4>
+                        <select id="bloomAnalizar" class="w-full p-2 border rounded text-sm">
+                            <option value="">Seleccionar verbo</option>
+                            <option value="analiza">Analiza</option>
+                            <option value="examina">Examina</option>
+                            <option value="diferencia">Diferencia</option>
+                            <option value="organiza">Organiza</option>
+                            <option value="deconstruye">Deconstruye</option>
+                            <option value="investiga">Investiga</option>
+                        </select>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border">
+                        <h4 class="font-semibold text-blue-700 mb-2">🔵 Evaluar</h4>
+                        <select id="bloomEvaluar" class="w-full p-2 border rounded text-sm">
+                            <option value="">Seleccionar verbo</option>
+                            <option value="evalúa">Evalúa</option>
+                            <option value="critica">Critica</option>
+                            <option value="juzga">Juzga</option>
+                            <option value="justifica">Justifica</option>
+                            <option value="argumenta">Argumenta</option>
+                            <option value="valora">Valora</option>
+                        </select>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border">
+                        <h4 class="font-semibold text-purple-700 mb-2">🟣 Crear</h4>
+                        <select id="bloomCrear" class="w-full p-2 border rounded text-sm">
+                            <option value="">Seleccionar verbo</option>
+                            <option value="crea">Crea</option>
+                            <option value="diseña">Diseña</option>
+                            <option value="construye">Construye</option>
+                            <option value="planifica">Planifica</option>
+                            <option value="produce">Produce</option>
+                            <option value="innova">Innova</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4 p-3 bg-white rounded border">
+                    <h4 class="font-semibold mb-2">📝 Resultado de Aprendizaje Actualizado:</h4>
+                    <div id="resultadoBloomPreview" class="text-gray-600 italic">Selecciona un verbo para ver la actualización automática</div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-between items-center">
+                <button onclick="volverAPaso1()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300">
+                    ← Volver a Información
+                </button>
+                <button onclick="generarRubrica()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-300">
+                    📊 Generar Rúbrica
+                </button>
+            </div>
+        </div>
+
+        <!-- Paso 3: Editor de Rúbrica -->
+        <div id="step3" class="hidden bg-white rounded-lg card-shadow p-6 mb-6 fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-semibold text-gray-800">📊 Editor de Rúbrica Analítica</h2>
+                <div class="space-x-2">
+                    <button onclick="agregarCriterio()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">+ Criterio</button>
+                    <button onclick="agregarNivel()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm">+ Nivel</button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table id="rubricaTable" class="w-full border-collapse border border-gray-300">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border border-gray-300 p-3 text-left font-medium">Criterios</th>
+                            <th class="border border-gray-300 p-3 text-center font-medium">Peso (%)</th>
+                            <th class="border border-gray-300 p-3 text-center font-medium">Excelente (5)</th>
+                            <th class="border border-gray-300 p-3 text-center font-medium">Bueno (4)</th>
+                            <th class="border border-gray-300 p-3 text-center font-medium">Satisfactorio (3)</th>
+                            <th class="border border-gray-300 p-3 text-center font-medium">Necesita Mejora (2)</th>
+                            <th class="border border-gray-300 p-3 text-center font-medium">Insuficiente (1)</th>
+                            <th class="border border-gray-300 p-3 text-center font-medium">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rubricaBody">
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-6 flex justify-between">
+                <button onclick="mostrarEvaluador()" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium">
+                    ⭐ Evaluar con Rúbrica
+                </button>
+                <div class="space-x-2">
+                    <button onclick="exportarPDF()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">📄 PDF</button>
+                    <button onclick="exportarExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">📊 Excel</button>
+                    <button onclick="exportarTexto()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg">📝 Texto</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evaluador -->
+        <div id="evaluador" class="hidden bg-white rounded-lg card-shadow p-6 mb-6 fade-in">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800">⭐ Evaluador de Rúbrica</h2>
+            <div id="evaluadorContent"></div>
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                <h3 class="text-lg font-semibold mb-2">📈 Resultado de la Evaluación</h3>
+                <div id="resultadoEvaluacion" class="text-gray-700"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let rubricaData = {
+            criterios: [],
+            niveles: [
+                { nombre: 'Excelente', valor: 5, color: 'bg-green-100' },
+                { nombre: 'Bueno', valor: 4, color: 'bg-blue-100' },
+                { nombre: 'Satisfactorio', valor: 3, color: 'bg-yellow-100' },
+                { nombre: 'Necesita Mejora', valor: 2, color: 'bg-orange-100' },
+                { nombre: 'Insuficiente', valor: 1, color: 'bg-red-100' }
+            ]
+        };
+
+        function generarConIA() {
+            const tema = document.getElementById('tema').value;
+            const asignatura = document.getElementById('asignatura').value;
+            const programa = document.getElementById('programa').value;
+            const nivel = document.getElementById('nivel').value;
+
+            if (!tema || !asignatura || !programa || !nivel) {
+                alert('Por favor, completa todos los campos');
+                return;
+            }
+
+            // Mostrar loading
+            document.getElementById('btnText').classList.add('hidden');
+            document.getElementById('loadingSpinner').classList.remove('hidden');
+
+            // Simular generación con IA (en una implementación real, aquí iría la llamada a la API de IA)
+            setTimeout(() => {
+                const resultadoAprendizaje = generarResultadoAprendizaje(tema, asignatura, nivel);
+                const actividadEvaluacion = generarActividadEvaluacion(tema, asignatura, nivel, resultadoAprendizaje);
+
+                document.getElementById('resultadoAprendizaje').value = resultadoAprendizaje;
+                document.getElementById('actividadEvaluacion').value = actividadEvaluacion;
+
+                mostrarPaso2();
+                document.getElementById('btnText').classList.remove('hidden');
+                document.getElementById('loadingSpinner').classList.add('hidden');
+            }, 2000);
+        }
+
+        function generarResultadoAprendizaje(tema, asignatura, nivel) {
+            const verbos = {
+                'Primaria': ['identifica', 'describe', 'explica', 'reconoce'],
+                'Secundaria': ['analiza', 'compara', 'evalúa', 'sintetiza'],
+                'Bachillerato': ['analiza críticamente', 'evalúa', 'diseña', 'argumenta'],
+                'Universidad': ['analiza sistemáticamente', 'evalúa críticamente', 'diseña soluciones', 'investiga'],
+                'Posgrado': ['investiga de manera autónoma', 'propone teorías', 'lidera investigaciones', 'innova']
+            };
+
+            const verbo = verbos[nivel][Math.floor(Math.random() * verbos[nivel].length)];
+            return `Al finalizar esta unidad, el estudiante ${verbo} los conceptos fundamentales de ${tema} en el contexto de ${asignatura}, demostrando comprensión profunda y capacidad de aplicación práctica en situaciones reales del nivel ${nivel.toLowerCase()}.`;
+        }
+
+        function generarActividadEvaluacion(tema, asignatura, nivel, resultado) {
+            const actividades = {
+                'Primaria': `Crear un proyecto visual (póster o maqueta) sobre ${tema} donde expliques los conceptos principales usando ejemplos de la vida cotidiana. Debes presentar tu trabajo a la clase y responder preguntas de tus compañeros.`,
+                'Secundaria': `Diseñar un experimento o investigación sobre ${tema} que incluya hipótesis, metodología, resultados y conclusiones. Presentar los hallazgos en un informe científico y defender las conclusiones ante un panel de evaluadores.`,
+                'Bachillerato': `Desarrollar un proyecto de investigación interdisciplinario sobre ${tema} que conecte con otras áreas del conocimiento. Crear una propuesta de solución a un problema real relacionado con el tema y presentarla en formato académico.`,
+                'Universidad': `Realizar una investigación original sobre ${tema} aplicando metodología científica rigurosa. Elaborar un artículo académico con revisión bibliográfica, análisis crítico y propuestas innovadoras para el campo de ${asignatura}.`,
+                'Posgrado': `Liderar un proyecto de investigación avanzada sobre ${tema} que contribuya al conocimiento en ${asignatura}. Desarrollar una propuesta teórica o metodológica innovadora y presentarla en un simposio académico.`
+            };
+
+            return actividades[nivel] || actividades['Universidad'];
+        }
+
+        function generarRubrica() {
+            const tema = document.getElementById('tema').value;
+            const nivel = document.getElementById('nivel').value;
+
+            // Generar criterios automáticamente basados en el tema y nivel
+            const criteriosBase = generarCriteriosIA(tema, nivel);
+            
+            rubricaData.criterios = criteriosBase;
+            actualizarTablaRubrica();
+            document.getElementById('step3').classList.remove('hidden');
+        }
+
+        function generarCriteriosIA(tema, nivel) {
+            const criteriosGenericos = [
+                {
+                    nombre: 'Comprensión Conceptual',
+                    peso: 30,
+                    descripciones: {
+                        5: 'Demuestra comprensión excepcional y profunda de todos los conceptos clave',
+                        4: 'Muestra comprensión sólida de la mayoría de conceptos importantes',
+                        3: 'Comprende los conceptos básicos con algunas limitaciones menores',
+                        2: 'Comprensión parcial con confusiones en conceptos importantes',
+                        1: 'Comprensión limitada o incorrecta de los conceptos fundamentales'
+                    }
+                },
+                {
+                    nombre: 'Aplicación Práctica',
+                    peso: 25,
+                    descripciones: {
+                        5: 'Aplica conocimientos de manera innovadora y efectiva en contextos complejos',
+                        4: 'Aplica conocimientos correctamente en la mayoría de situaciones',
+                        3: 'Aplicación básica correcta con orientación ocasional',
+                        2: 'Aplicación inconsistente con errores significativos',
+                        1: 'Dificultad para aplicar conocimientos en situaciones prácticas'
+                    }
+                },
+                {
+                    nombre: 'Análisis y Pensamiento Crítico',
+                    peso: 25,
+                    descripciones: {
+                        5: 'Análisis profundo, crítico e independiente con conclusiones bien fundamentadas',
+                        4: 'Análisis sólido con algunas conexiones críticas importantes',
+                        3: 'Análisis básico con identificación de elementos principales',
+                        2: 'Análisis superficial con limitaciones en el razonamiento',
+                        1: 'Análisis mínimo o ausente, sin evidencia de pensamiento crítico'
+                    }
+                },
+                {
+                    nombre: 'Comunicación y Presentación',
+                    peso: 20,
+                    descripciones: {
+                        5: 'Comunicación clara, precisa y persuasiva con excelente organización',
+                        4: 'Comunicación efectiva y bien organizada con ideas claras',
+                        3: 'Comunicación adecuada con estructura básica comprensible',
+                        2: 'Comunicación confusa con problemas de organización',
+                        1: 'Comunicación deficiente, difícil de seguir o comprender'
+                    }
+                }
+            ];
+
+            return criteriosGenericos;
+        }
+
+        function actualizarTablaRubrica() {
+            const tbody = document.getElementById('rubricaBody');
+            tbody.innerHTML = '';
+
+            rubricaData.criterios.forEach((criterio, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="border border-gray-300 p-3">
+                        <input type="text" value="${criterio.nombre}" onchange="actualizarCriterio(${index}, 'nombre', this.value)" 
+                               class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500">
+                    </td>
+                    <td class="border border-gray-300 p-3 text-center">
+                        <input type="number" value="${criterio.peso}" min="1" max="100" onchange="actualizarCriterio(${index}, 'peso', this.value)" 
+                               class="w-16 p-2 border rounded text-center focus:ring-2 focus:ring-blue-500">
+                    </td>
+                    ${rubricaData.niveles.map(nivel => `
+                        <td class="border border-gray-300 p-3 ${nivel.color}">
+                            <textarea onchange="actualizarDescripcion(${index}, ${nivel.valor}, this.value)" 
+                                      class="w-full p-2 border rounded text-sm resize-none focus:ring-2 focus:ring-blue-500" 
+                                      rows="3">${criterio.descripciones[nivel.valor] || ''}</textarea>
+                        </td>
+                    `).join('')}
+                    <td class="border border-gray-300 p-3 text-center">
+                        <button onclick="eliminarCriterio(${index})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                            🗑️
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function actualizarCriterio(index, campo, valor) {
+            rubricaData.criterios[index][campo] = campo === 'peso' ? parseInt(valor) : valor;
+        }
+
+        function actualizarDescripcion(criterioIndex, nivel, descripcion) {
+            rubricaData.criterios[criterioIndex].descripciones[nivel] = descripcion;
+        }
+
+        function agregarCriterio() {
+            const nuevoCriterio = {
+                nombre: 'Nuevo Criterio',
+                peso: 10,
+                descripciones: {
+                    5: 'Descripción para nivel excelente',
+                    4: 'Descripción para nivel bueno',
+                    3: 'Descripción para nivel satisfactorio',
+                    2: 'Descripción para nivel necesita mejora',
+                    1: 'Descripción para nivel insuficiente'
+                }
+            };
+            rubricaData.criterios.push(nuevoCriterio);
+            actualizarTablaRubrica();
+        }
+
+        function eliminarCriterio(index) {
+            if (confirm('¿Estás seguro de eliminar este criterio?')) {
+                rubricaData.criterios.splice(index, 1);
+                actualizarTablaRubrica();
+            }
+        }
+
+        function agregarNivel() {
+            alert('Funcionalidad de agregar niveles personalizados estará disponible en la próxima versión');
+        }
+
+        function mostrarEvaluador() {
+            const evaluadorContent = document.getElementById('evaluadorContent');
+            let html = '<div class="space-y-4">';
+
+            rubricaData.criterios.forEach((criterio, index) => {
+                html += `
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-lg mb-3">${criterio.nombre} (${criterio.peso}%)</h4>
+                        <div class="grid grid-cols-5 gap-2">
+                            ${rubricaData.niveles.map(nivel => `
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="criterio_${index}" value="${nivel.valor}" 
+                                           onchange="calcularCalificacion()" class="sr-only">
+                                    <div class="border-2 border-gray-300 rounded-lg p-3 text-center hover:border-blue-500 transition-colors radio-option">
+                                        <div class="font-semibold">${nivel.nombre}</div>
+                                        <div class="text-sm text-gray-600">(${nivel.valor})</div>
+                                        <div class="text-xs mt-1">${criterio.descripciones[nivel.valor] || ''}</div>
+                                    </div>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            evaluadorContent.innerHTML = html;
+            document.getElementById('evaluador').classList.remove('hidden');
+
+            // Agregar estilos para radio buttons
+            const style = document.createElement('style');
+            style.textContent = `
+                input[type="radio"]:checked + .radio-option {
+                    border-color: #3b82f6;
+                    background-color: #eff6ff;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function calcularCalificacion() {
+            let puntuacionTotal = 0;
+            let pesoTotal = 0;
+            let criteriosEvaluados = 0;
+
+            rubricaData.criterios.forEach((criterio, index) => {
+                const seleccionado = document.querySelector(`input[name="criterio_${index}"]:checked`);
+                if (seleccionado) {
+                    puntuacionTotal += parseInt(seleccionado.value) * (criterio.peso / 100);
+                    pesoTotal += criterio.peso;
+                    criteriosEvaluados++;
+                }
+            });
+
+            if (criteriosEvaluados === rubricaData.criterios.length) {
+                const calificacionFinal = puntuacionTotal;
+                const calificacionCualitativa = obtenerCalificacionCualitativa(calificacionFinal);
+                
+                document.getElementById('resultadoEvaluacion').innerHTML = `
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <h4 class="font-semibold">Calificación Cuantitativa:</h4>
+                            <div class="text-2xl font-bold text-blue-600">${calificacionFinal.toFixed(2)} / 5.0</div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold">Calificación Cualitativa:</h4>
+                            <div class="text-lg font-medium ${obtenerColorCalificacion(calificacionFinal)}">${calificacionCualitativa.nivel}</div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <h4 class="font-semibold mb-2">Retroalimentación:</h4>
+                        <p class="text-gray-700">${calificacionCualitativa.descripcion}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function obtenerCalificacionCualitativa(puntuacion) {
+            if (puntuacion >= 4.5) {
+                return {
+                    nivel: 'Excelente',
+                    descripcion: 'El estudiante ha demostrado un dominio excepcional del resultado de aprendizaje, superando las expectativas en todos los aspectos evaluados.'
+                };
+            } else if (puntuacion >= 3.5) {
+                return {
+                    nivel: 'Bueno',
+                    descripcion: 'El estudiante ha logrado el resultado de aprendizaje de manera satisfactoria, demostrando competencia sólida en la mayoría de aspectos.'
+                };
+            } else if (puntuacion >= 2.5) {
+                return {
+                    nivel: 'Satisfactorio',
+                    descripcion: 'El estudiante ha alcanzado el resultado de aprendizaje de manera básica, cumpliendo con los requisitos mínimos esperados.'
+                };
+            } else if (puntuacion >= 1.5) {
+                return {
+                    nivel: 'Necesita Mejora',
+                    descripcion: 'El estudiante muestra progreso hacia el resultado de aprendizaje pero requiere apoyo adicional para alcanzar el nivel esperado.'
+                };
+            } else {
+                return {
+                    nivel: 'Insuficiente',
+                    descripcion: 'El estudiante no ha demostrado el logro del resultado de aprendizaje y necesita intervención pedagógica significativa.'
+                };
+            }
+        }
+
+        function obtenerColorCalificacion(puntuacion) {
+            if (puntuacion >= 4.5) return 'text-green-600';
+            if (puntuacion >= 3.5) return 'text-blue-600';
+            if (puntuacion >= 2.5) return 'text-yellow-600';
+            if (puntuacion >= 1.5) return 'text-orange-600';
+            return 'text-red-600';
+        }
+
+        function exportarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Título
+            doc.setFontSize(16);
+            doc.text('Rúbrica Analítica de Evaluación', 20, 20);
+            
+            // Información básica
+            doc.setFontSize(12);
+            doc.text(`Tema: ${document.getElementById('tema').value}`, 20, 35);
+            doc.text(`Asignatura: ${document.getElementById('asignatura').value}`, 20, 45);
+            doc.text(`Programa: ${document.getElementById('programa').value}`, 20, 55);
+            doc.text(`Nivel: ${document.getElementById('nivel').value}`, 20, 65);
+            
+            // Resultado de aprendizaje
+            doc.text('Resultado de Aprendizaje:', 20, 80);
+            const resultadoLines = doc.splitTextToSize(document.getElementById('resultadoAprendizaje').value, 170);
+            doc.text(resultadoLines, 20, 90);
+            
+            // Actividad
+            doc.text('Actividad de Evaluación:', 20, 120);
+            const actividadLines = doc.splitTextToSize(document.getElementById('actividadEvaluacion').value, 170);
+            doc.text(actividadLines, 20, 130);
+            
+            // Rúbrica (simplificada)
+            let yPos = 160;
+            doc.text('Criterios de Evaluación:', 20, yPos);
+            yPos += 15;
+            
+            rubricaData.criterios.forEach(criterio => {
+                doc.text(`• ${criterio.nombre} (${criterio.peso}%)`, 25, yPos);
+                yPos += 10;
+            });
+            
+            doc.save('rubrica-analitica.pdf');
+        }
+
+        function exportarExcel() {
+            const wb = XLSX.utils.book_new();
+            
+            // Hoja 1: Información general
+            const infoData = [
+                ['Tema', document.getElementById('tema').value],
+                ['Asignatura', document.getElementById('asignatura').value],
+                ['Programa', document.getElementById('programa').value],
+                ['Nivel', document.getElementById('nivel').value],
+                [''],
+                ['Resultado de Aprendizaje', document.getElementById('resultadoAprendizaje').value],
+                [''],
+                ['Actividad de Evaluación', document.getElementById('actividadEvaluacion').value]
+            ];
+            const wsInfo = XLSX.utils.aoa_to_sheet(infoData);
+            XLSX.utils.book_append_sheet(wb, wsInfo, 'Información');
+            
+            // Hoja 2: Rúbrica
+            const rubricaHeaders = ['Criterio', 'Peso (%)', 'Excelente (5)', 'Bueno (4)', 'Satisfactorio (3)', 'Necesita Mejora (2)', 'Insuficiente (1)'];
+            const rubricaData2 = [rubricaHeaders];
+            
+            rubricaData.criterios.forEach(criterio => {
+                rubricaData2.push([
+                    criterio.nombre,
+                    criterio.peso,
+                    criterio.descripciones[5] || '',
+                    criterio.descripciones[4] || '',
+                    criterio.descripciones[3] || '',
+                    criterio.descripciones[2] || '',
+                    criterio.descripciones[1] || ''
+                ]);
+            });
+            
+            const wsRubrica = XLSX.utils.aoa_to_sheet(rubricaData2);
+            XLSX.utils.book_append_sheet(wb, wsRubrica, 'Rúbrica');
+            
+            XLSX.writeFile(wb, 'rubrica-analitica.xlsx');
+        }
+
+        function regenerarResultado() {
+            const tema = document.getElementById('tema').value;
+            const asignatura = document.getElementById('asignatura').value;
+            const nivel = document.getElementById('nivel').value;
+            
+            if (!tema || !asignatura || !nivel) {
+                alert('Necesitas completar la información básica primero');
+                return;
+            }
+            
+            // Simular regeneración con IA
+            const nuevoResultado = generarResultadoAprendizaje(tema, asignatura, nivel);
+            document.getElementById('resultadoAprendizaje').value = nuevoResultado;
+            
+            // Efecto visual de actualización
+            const textarea = document.getElementById('resultadoAprendizaje');
+            textarea.style.backgroundColor = '#e0f2fe';
+            setTimeout(() => {
+                textarea.style.backgroundColor = '';
+            }, 1000);
+        }
+
+        function regenerarActividad() {
+            const tema = document.getElementById('tema').value;
+            const asignatura = document.getElementById('asignatura').value;
+            const nivel = document.getElementById('nivel').value;
+            const resultado = document.getElementById('resultadoAprendizaje').value;
+            
+            if (!tema || !asignatura || !nivel) {
+                alert('Necesitas completar la información básica primero');
+                return;
+            }
+            
+            // Simular regeneración con IA
+            const nuevaActividad = generarActividadEvaluacion(tema, asignatura, nivel, resultado);
+            document.getElementById('actividadEvaluacion').value = nuevaActividad;
+            
+            // Efecto visual de actualización
+            const textarea = document.getElementById('actividadEvaluacion');
+            textarea.style.backgroundColor = '#e0f2fe';
+            setTimeout(() => {
+                textarea.style.backgroundColor = '';
+            }, 1000);
+        }
+
+        function volverAPaso1() {
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step3').classList.add('hidden');
+            document.getElementById('evaluador').classList.add('hidden');
+        }
+
+        // Funciones para Taxonomía de Bloom
+        function configurarBloom() {
+            const selectores = ['bloomRecordar', 'bloomComprender', 'bloomAplicar', 'bloomAnalizar', 'bloomEvaluar', 'bloomCrear'];
+            
+            selectores.forEach(id => {
+                document.getElementById(id).addEventListener('change', function() {
+                    // Limpiar otros selectores cuando se selecciona uno
+                    selectores.forEach(otherId => {
+                        if (otherId !== id) {
+                            document.getElementById(otherId).value = '';
+                        }
+                    });
+                    actualizarResultadoConBloom();
+                });
+            });
+        }
+
+        function actualizarResultadoConBloom() {
+            const tema = document.getElementById('tema').value;
+            const asignatura = document.getElementById('asignatura').value;
+            const nivel = document.getElementById('nivel').value;
+            
+            // Obtener el verbo seleccionado
+            const selectores = ['bloomRecordar', 'bloomComprender', 'bloomAplicar', 'bloomAnalizar', 'bloomEvaluar', 'bloomCrear'];
+            let verboSeleccionado = '';
+            let nivelBloom = '';
+            
+            selectores.forEach(id => {
+                const valor = document.getElementById(id).value;
+                if (valor) {
+                    verboSeleccionado = valor;
+                    nivelBloom = id.replace('bloom', '');
+                }
+            });
+
+            if (verboSeleccionado && tema && asignatura && nivel) {
+                const resultadoActualizado = `Al finalizar esta unidad, el estudiante ${verboSeleccionado} los conceptos fundamentales de ${tema} en el contexto de ${asignatura}, demostrando dominio del nivel cognitivo "${nivelBloom.toLowerCase()}" de la taxonomía de Bloom, apropiado para el nivel ${nivel.toLowerCase()}.`;
+                
+                document.getElementById('resultadoBloomPreview').innerHTML = resultadoActualizado;
+                document.getElementById('resultadoBloomPreview').classList.remove('italic', 'text-gray-600');
+                document.getElementById('resultadoBloomPreview').classList.add('text-gray-800');
+                
+                // Actualizar automáticamente el textarea principal
+                document.getElementById('resultadoAprendizaje').value = resultadoActualizado;
+                
+                // Efecto visual
+                const preview = document.getElementById('resultadoBloomPreview');
+                preview.style.backgroundColor = '#dcfce7';
+                setTimeout(() => {
+                    preview.style.backgroundColor = '';
+                }, 1500);
+            } else {
+                document.getElementById('resultadoBloomPreview').innerHTML = 'Selecciona un verbo para ver la actualización automática';
+                document.getElementById('resultadoBloomPreview').classList.add('italic', 'text-gray-600');
+                document.getElementById('resultadoBloomPreview').classList.remove('text-gray-800');
+            }
+        }
+
+        // Inicializar cuando se muestra el paso 2
+        function mostrarPaso2() {
+            document.getElementById('step2').classList.remove('hidden');
+            setTimeout(() => {
+                configurarBloom();
+            }, 100);
+        }
+
+        function exportarTexto() {
+            let contenido = `RÚBRICA ANALÍTICA DE EVALUACIÓN\n`;
+            contenido += `=====================================\n\n`;
+            contenido += `INFORMACIÓN GENERAL:\n`;
+            contenido += `Tema: ${document.getElementById('tema').value}\n`;
+            contenido += `Asignatura: ${document.getElementById('asignatura').value}\n`;
+            contenido += `Programa: ${document.getElementById('programa').value}\n`;
+            contenido += `Nivel: ${document.getElementById('nivel').value}\n\n`;
+            
+            contenido += `RESULTADO DE APRENDIZAJE:\n`;
+            contenido += `${document.getElementById('resultadoAprendizaje').value}\n\n`;
+            
+            contenido += `ACTIVIDAD DE EVALUACIÓN:\n`;
+            contenido += `${document.getElementById('actividadEvaluacion').value}\n\n`;
+            
+            contenido += `CRITERIOS DE EVALUACIÓN:\n`;
+            contenido += `========================\n\n`;
+            
+            rubricaData.criterios.forEach((criterio, index) => {
+                contenido += `${index + 1}. ${criterio.nombre} (${criterio.peso}%)\n`;
+                contenido += `   Excelente (5): ${criterio.descripciones[5] || ''}\n`;
+                contenido += `   Bueno (4): ${criterio.descripciones[4] || ''}\n`;
+                contenido += `   Satisfactorio (3): ${criterio.descripciones[3] || ''}\n`;
+                contenido += `   Necesita Mejora (2): ${criterio.descripciones[2] || ''}\n`;
+                contenido += `   Insuficiente (1): ${criterio.descripciones[1] || ''}\n\n`;
+            });
+            
+            const blob = new Blob([contenido], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'rubrica-analitica.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function nuevoProyecto() {
+            if (confirm('¿Estás seguro de que quieres crear un nuevo proyecto? Se perderá todo el progreso actual.')) {
+                // Limpiar todos los campos del formulario
+                document.getElementById('tema').value = '';
+                document.getElementById('asignatura').value = '';
+                document.getElementById('programa').value = '';
+                document.getElementById('nivel').value = '';
+                document.getElementById('resultadoAprendizaje').value = '';
+                document.getElementById('actividadEvaluacion').value = '';
+                
+                // Limpiar selectores de Bloom
+                const selectores = ['bloomRecordar', 'bloomComprender', 'bloomAplicar', 'bloomAnalizar', 'bloomEvaluar', 'bloomCrear'];
+                selectores.forEach(id => {
+                    document.getElementById(id).value = '';
+                });
+                
+                // Limpiar preview de Bloom
+                document.getElementById('resultadoBloomPreview').innerHTML = 'Selecciona un verbo para ver la actualización automática';
+                document.getElementById('resultadoBloomPreview').classList.add('italic', 'text-gray-600');
+                document.getElementById('resultadoBloomPreview').classList.remove('text-gray-800');
+                
+                // Resetear datos de la rúbrica
+                rubricaData.criterios = [];
+                
+                // Ocultar todos los pasos excepto el primero
+                document.getElementById('step2').classList.add('hidden');
+                document.getElementById('step3').classList.add('hidden');
+                document.getElementById('evaluador').classList.add('hidden');
+                
+                // Resetear botones de loading
+                document.getElementById('btnText').classList.remove('hidden');
+                document.getElementById('loadingSpinner').classList.add('hidden');
+                
+                // Mostrar mensaje de confirmación
+                const mensaje = document.createElement('div');
+                mensaje.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                mensaje.innerHTML = '✅ Nuevo proyecto creado exitosamente';
+                document.body.appendChild(mensaje);
+                
+                setTimeout(() => {
+                    mensaje.remove();
+                }, 3000);
+            }
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97fbd30de4ce31da',t:'MTc1Nzk3ODEwOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
